@@ -1,0 +1,5 @@
+.venv/
+.idea/
+.bashrc
+resources/combined_data.csv
+*.csv
