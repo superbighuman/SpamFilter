@@ -11,7 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+<<<<<<< HEAD
 
+=======
+import os
+>>>>>>> faee2cd (fix git)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +29,11 @@ SECRET_KEY = 'django-insecure-ac^(bdl)w(z@&2k!!g&g@^ssayvtiy5tv$)y3_ri2p%l1*3yzx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+<<<<<<< HEAD
 ALLOWED_HOSTS = []
+=======
+ALLOWED_HOSTS = ["*"]
+>>>>>>> faee2cd (fix git)
 
 
 # Application definition
@@ -38,6 +46,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Filter',
+<<<<<<< HEAD
+=======
+    'corsheaders',
+    'drf_yasg',
+    'rest_framework',
+>>>>>>> faee2cd (fix git)
 ]
 
 MIDDLEWARE = [
@@ -48,14 +62,27 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+<<<<<<< HEAD
 ]
 
+=======
+    'corsheaders.middleware.CorsMiddleware',
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://10.10.5.24",  # Ваш IP
+    "http://localhost",
+]
+>>>>>>> faee2cd (fix git)
 ROOT_URLCONF = 'SpamFilter.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+<<<<<<< HEAD
         'DIRS': ["Filter/templates"],
+=======
+        'DIRS': [BASE_DIR / "SpamFilter/templates"],
+>>>>>>> faee2cd (fix git)
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -115,9 +142,31 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+<<<<<<< HEAD
 STATIC_URL = 'static/'
 
+=======
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+>>>>>>> faee2cd (fix git)
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+<<<<<<< HEAD
+=======
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # /1 - номер БД
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Для сессий (опционально)
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+>>>>>>> faee2cd (fix git)

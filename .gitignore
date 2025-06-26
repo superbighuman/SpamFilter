@@ -3,3 +3,4 @@
 .bashrc
 resources/combined_data.csv
 *.csv
+*.pyc

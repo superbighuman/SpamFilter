@@ -27,7 +27,7 @@ spark = SparkSession.builder \
                 "--add-opens=java.base/java.util=ALL-UNNAMED "
                 "-XX:+IgnoreUnrecognizedVMOptions") \
         .getOrCreate()
-loaded_model = PipelineModel.load("../models/spam_model_lr")
+loaded_model = PipelineModel.load("models/spam_model_lr")
 
 test_emails = [
     "Congratulations! You won $1,000,000 lottery! Click here to claim",
@@ -41,6 +41,6 @@ schema = StructType([
 ])
 test_df = spark.createDataFrame([(email,) for email in test_emails], schema)
 result = loaded_model.transform(test_df)
-print("\nРезультаты классификации:")
+print("\nPrediction:")
 print(result.select("email", "prediction").show(truncate=False))
 spark.stop()

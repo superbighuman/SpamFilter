@@ -1,0 +1,157 @@
+/* Base Styles */
+body {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Card Styles */
+.card {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: none;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* Form Styles */
+.form-control {
+    border-radius: 10px;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s;
+}
+
+.form-control:focus {
+    border-color: #4361ee;
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: #4361ee;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 25px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #3a56d4;
+    transform: translateY(-2px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Icon Styles */
+.icon-title {
+    font-size: 2.5rem;
+    color: #4361ee;
+}
+
+/* Result Box Styles */
+.result-box {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    margin-top: 0;
+    border-radius: 10px;
+}
+
+.result-box.show {
+    opacity: 1;
+    height: auto;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.result-content {
+    padding: 15px;
+}
+
+/* Spam Result */
+.result-box.spam {
+    background-color: rgba(244, 67, 54, 0.1);
+    border-left: 5px solid #f44336;
+}
+
+.result-box.spam .spam-icon {
+    display: inline-block;
+    color: #f44336;
+}
+
+.result-box.spam .not-spam-icon {
+    display: none;
+}
+
+.result-box.spam .progress-bar {
+    background-color: #f44336;
+}
+
+/* Not Spam Result */
+.result-box.not-spam {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-left: 5px solid #4caf50;
+}
+
+.result-box.not-spam .spam-icon {
+    display: none;
+}
+
+.result-box.not-spam .not-spam-icon {
+    display: inline-block;
+    color: #4caf50;
+}
+
+.result-box.not-spam .progress-bar {
+    background-color: #4caf50;
+}
+
+/* Progress Bar */
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 1s ease;
+}
+
+/* Confidence Meter */
+.confidence-meter {
+    margin-top: 15px;
+}
+
+.confidence-label {
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.confidence-value {
+    font-weight: 700;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .card {
+        padding: 20px;
+    }
+    
+    .icon-title {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+}
