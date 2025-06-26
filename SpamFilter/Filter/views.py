@@ -1,9 +1,7 @@
 from django.shortcuts import render
-<<<<<<< HEAD
 from django.http import HttpResponse, HttpRequest
 def menu(request:HttpRequest):
     return render(request,"menu.html")
-=======
 from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from pyspark.sql import SparkSession
@@ -101,4 +99,4 @@ def predict(request):
             return JsonResponse({'status': 'error', 'error': str(e)})
 
     return JsonResponse({'status': 'error', 'error': 'Invalid request method'})
->>>>>>> faee2cd (fix git)
+
