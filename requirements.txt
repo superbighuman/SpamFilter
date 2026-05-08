@@ -1,0 +1,13 @@
+pyspark
+django
+numpy
+pandas
+django-cors-headers
+redis
+django-redis
+drf-yasg
+torch
+jupyter
+deep_translator
+libretranslate
+matplotlib

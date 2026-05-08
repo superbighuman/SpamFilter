@@ -4,3 +4,5 @@
 resources/combined_data.csv
 *.csv
 *.pyc
+/.vscode/
+/.ubuntu_venv/

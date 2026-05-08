@@ -14,10 +14,21 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+import sys
+import os
+#JAVA_HOME = r"C:\Program Files\Java\jdk-17"
+JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
+os.environ["JAVA_HOME"] = JAVA_HOME
+#os.environ["HADOOP_HOME"] = r"C:\hadoop"
+os.environ["PATH"] = JAVA_HOME + r"\bin;" + os.environ["PATH"]
+
+os.environ["PYSPARK_PYTHON"] = sys.executable
+os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
+
 spark = SparkSession.builder \
         .appName("SpamFilter") \
-        .config("spark.driver.memory", "1g") \
-        .config("spark.executor.memory", "1g") \
+        .config("spark.driver.memory", "2g") \
+        .config("spark.executor.memory", "2g") \
         .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
         .config("spark.driver.extraJavaOptions", 
                 "--add-opens=java.base/java.lang=ALL-UNNAMED "

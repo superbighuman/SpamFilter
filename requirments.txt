@@ -1,8 +1,0 @@
-pyspark
-django
-numpy
-pandas
-django-cors-headers
-redis
-django-redis
-drf-yasg

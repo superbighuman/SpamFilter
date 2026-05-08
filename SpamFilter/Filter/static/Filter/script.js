@@ -52,7 +52,7 @@ function get_predict() {
         "message": msgText,
     }
     let request = new XMLHttpRequest();
-    let url = "http://10.10.5.24:8000/predict/"
+    let url = "http://localhost:8000/predict/"
     request.open("POST", url, false);
     request.setRequestHeader("Content-Type", "application/json");
     request.send(JSON.stringify(params));
