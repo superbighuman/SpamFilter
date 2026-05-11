@@ -17,7 +17,8 @@ from rest_framework.response import Response
 import sys
 import os
 #JAVA_HOME = r"C:\Program Files\Java\jdk-17"
-JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
+#JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
+JAVA_HOME = '/opt/homebrew/Cellar/openjdk@17/17.0.19'
 os.environ["JAVA_HOME"] = JAVA_HOME
 #os.environ["HADOOP_HOME"] = r"C:\hadoop"
 os.environ["PATH"] = JAVA_HOME + r"\bin;" + os.environ["PATH"]
@@ -41,7 +42,7 @@ spark = SparkSession.builder \
                 "--add-opens=java.base/java.util=ALL-UNNAMED "
                 "-XX:+IgnoreUnrecognizedVMOptions") \
         .getOrCreate()
-model = PipelineModel.load("models/spam_model_lr") #SpamFilter/Filter/views.py
+model = PipelineModel.load("spam_filter/models/spam_model_lr_ru") #SpamFilter/Filter/views.py
 def menu(request:HttpRequest):
     return render(request,"menu.html")
 @swagger_auto_schema(
@@ -97,7 +98,7 @@ def predict(request):
             probability = prediction.select("probability").collect()[0][0][1]
 
             result_data = {
-                'result': 'SPAM' if result == 1 else 'NOT SPAM',
+                'result': 'SPAM' if probability > 0.5 else 'NOT SPAM',
                 'probability': probability
             }
 

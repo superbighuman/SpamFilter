@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ac^(bdl)w(z@&2k!!g&g@^ssayvtiy5tv$)y3_ri2p%l1*3yzx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*", 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Filter',
-    #'corsheaders',
+    'corsheaders',
     #'drf_yasg',
     #'rest_framework'
     #'django_redis',
@@ -56,7 +56,8 @@ MIDDLEWARE = [
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://10.10.5.24",  # Ваш IP
-    "http://localhost",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000"
 ]
 
 ROOT_URLCONF = 'SpamFilter.urls'

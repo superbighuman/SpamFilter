@@ -11,3 +11,4 @@ jupyter
 deep_translator
 libretranslate
 matplotlib
+pyarrow
