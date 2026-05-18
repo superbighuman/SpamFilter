@@ -8,9 +8,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Установка Java 17 (легкая версия)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends openjdk-17-jdk-headless && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y openjdk-17-jdk
 
 # Рабочая директория
 WORKDIR /app

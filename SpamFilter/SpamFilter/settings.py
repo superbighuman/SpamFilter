@@ -39,9 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Filter',
     'corsheaders',
-    #'drf_yasg',
-    #'rest_framework'
-    #'django_redis',
+    'drf_yasg',
+    'rest_framework',
+    'django_redis',
 ]
 
 MIDDLEWARE = [
@@ -145,7 +145,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # /1 - номер БД
+        "LOCATION": "redis://redis:6379/1",  # /1 - номер БД
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }

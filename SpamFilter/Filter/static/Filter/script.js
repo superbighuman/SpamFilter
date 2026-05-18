@@ -36,7 +36,7 @@ $(document).ready(function () {
         resultBox.addClass('show');
 
         // Update result text
-        $('.result-text').text(isSpam ? 'This letter contains SPAM!' : 'This is ham.');
+        $('.result-text').text(isSpam ? 'Это СПАМ' : 'Это не спам');
 
         // Update confidence meter
         const probability = (data.probability * 100).toFixed(2);
@@ -70,7 +70,7 @@ function get_predict() {
     resultBox.addClass('show');
 
     // Update result text
-    $('.result-text').text(isSpam ? 'This letter contains SPAM!' : 'This is ham.');
+    $('.result-text').text(isSpam ? 'Это СПАМ' : 'Это не спам');
 
     // Update confidence meter
     const probability = (answer.probability * 100).toFixed(2);
