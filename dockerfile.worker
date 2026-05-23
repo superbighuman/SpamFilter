@@ -1,0 +1,22 @@
+FROM python:3.12-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y openjdk-17-jdk
+
+WORKDIR /app
+
+COPY req_docker.txt .
+RUN pip install --no-cache-dir -r req_docker.txt
+
+# Копируем модель в образ (путь /app/models)
+COPY models /app/models
+
+COPY worker.py .
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PYSPARK_PYTHON=python
+
+CMD ["python", "worker.py"]

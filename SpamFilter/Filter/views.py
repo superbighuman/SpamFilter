@@ -1,53 +1,22 @@
+import os, json, hashlib, uuid, socket
 from django.shortcuts import render
-from django.http import HttpResponse, HttpRequest
-def menu(request:HttpRequest):
-    return render(request,"menu.html")
-from django.http import HttpResponse, HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from pyspark.sql import SparkSession
-from pyspark.ml import PipelineModel
-import json
-from django_redis import get_redis_connection
-import time
-import hashlib
+from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-import sys
-import os
-#JAVA_HOME = r"C:\Program Files\Java\jdk-17"
-JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
-#JAVA_HOME = '/opt/homebrew/Cellar/openjdk@17/17.0.19'
-os.environ["JAVA_HOME"] = JAVA_HOME
-#os.environ["HADOOP_HOME"] = r"C:\hadoop"
-os.environ["PATH"] = JAVA_HOME + r"\bin;" + os.environ["PATH"]
+from django_redis import get_redis_connection
 
-os.environ["PYSPARK_PYTHON"] = sys.executable
-os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
+# Адрес Spark-воркера (имя контейнера в docker-compose)
+SPARK_HOST = os.environ.get("SPARK_STREAMING_HOST", "spark-streaming")
+SPARK_PORT = 9999
 
-spark = SparkSession.builder \
-        .appName("SpamFilter") \
-        .config("spark.driver.memory", "2g") \
-        .config("spark.executor.memory", "2g") \
-        .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-        .config("spark.driver.extraJavaOptions", 
-                "--add-opens=java.base/java.lang=ALL-UNNAMED "
-                "--add-opens=java.base/java.nio=ALL-UNNAMED "
-                "--add-opens=java.base/java.util=ALL-UNNAMED "
-                "-XX:+IgnoreUnrecognizedVMOptions") \
-        .config("spark.executor.extraJavaOptions", 
-                "--add-opens=java.base/java.lang=ALL-UNNAMED "
-                "--add-opens=java.base/java.nio=ALL-UNNAMED "
-                "--add-opens=java.base/java.util=ALL-UNNAMED "
-                "-XX:+IgnoreUnrecognizedVMOptions") \
-        .getOrCreate()
-model = PipelineModel.load("models/spam_model_lr_ru") #SpamFilter/Filter/views.py
-def menu(request:HttpRequest):
-    return render(request,"menu.html")
+def menu(request: HttpRequest):
+    return render(request, "menu.html")
+
 @swagger_auto_schema(
     method='post',
-    operation_description="Определение спама на основе текста сообщения",
+    operation_description="Определение спама (асинхронный режим через сокет)",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         required=['message'],
@@ -56,59 +25,74 @@ def menu(request:HttpRequest):
         },
     ),
     responses={
-        200: openapi.Response(
-            description="Результат предсказания",
-            examples={
-                "application/json": {
-                    "status": "success",
-                    "result": "SPAM",
-                    "probability": 0.9432
-                }
-            }
-        ),
+        202: openapi.Response(description="Задача принята в обработку"),
+        200: openapi.Response(description="Результат из кеша"),
         400: "Bad request"
     }
 )
 @csrf_exempt
 @api_view(['POST'])
 def predict(request):
-    if request.method == 'POST':
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'error': 'Invalid method'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        message = data.get('message', '').strip()
+        if not message:
+            return JsonResponse({'status': 'error', 'error': 'Empty message'}, status=400)
+
         redis_conn = get_redis_connection("default")
-        try:
-            data = json.loads(request.body)
-            message = data.get('message', '').strip()
+        msg_hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
+        cache_key = f"spam_check:{msg_hash}"
 
-            if not message:
-                return JsonResponse({'status': 'error', 'error': 'Empty message'})
-
-            # Хешируем сообщение для использования как ключ Redis (безопаснее, короче)
-            key = f"spam_check:{hashlib.sha256(message.encode()).hexdigest()}"
-
-            # Попытка получить результат из Redis
-            cached = redis_conn.get(key)
-            if cached:
-                result_data = json.loads(cached)
-                return JsonResponse({'status': 'success', **result_data})
-
-            # Если в Redis ничего не найдено — вызываем модель
-            df = spark.createDataFrame([(message,)], ["email"])
-            prediction = model.transform(df)
-
-            result = prediction.select("prediction").collect()[0][0]
-            probability = prediction.select("probability").collect()[0][0][1]
-
-            result_data = {
-                'result': 'SPAM' if probability > 0.5 else 'NOT SPAM',
-                'probability': probability
-            }
-
-            # Сохраняем результат в Redis (например, на 1 день — 86400 секунд)
-            redis_conn.setex(key, 86400, json.dumps(result_data))
-
+        # Кеш
+        cached = redis_conn.get(cache_key)
+        if cached:
+            result_data = json.loads(cached)
             return JsonResponse({'status': 'success', **result_data})
 
+        # Новая задача
+        task_id = uuid.uuid4().hex
+        task_data = {
+            'task_id': task_id,
+            'message': message,
+            'hash': msg_hash
+        }
+        redis_conn.setex(f"task:{task_id}:status", 300, "processing")
+
+        # Отправка в сокет Spark-воркера
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            sock.connect((SPARK_HOST, SPARK_PORT))
+            sock.sendall((json.dumps(task_data) + '\n').encode('utf-8'))
+            sock.close()
         except Exception as e:
-            return JsonResponse({'status': 'error', 'error': str(e)})
+            return JsonResponse({'status': 'error', 'error': f'Spark unavailable: {e}'}, status=500)
 
-    return JsonResponse({'status': 'error', 'error': 'Invalid request method'})
+        return JsonResponse({'status': 'accepted', 'task_id': task_id}, status=202)
 
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="Получить результат по task_id",
+    manual_parameters=[...],  # оставьте как есть
+    responses={...}
+)
+@api_view(['GET'])
+def get_result(request, task_id):
+    redis_conn = get_redis_connection("default")
+    status = redis_conn.get(f"task:{task_id}:status")
+    if status is None:
+        return JsonResponse({'status': 'error', 'error': 'Unknown task_id'}, status=404)
+    status = status.decode()
+    if status == "processing":
+        return JsonResponse({'status': 'processing'})
+    result_json = redis_conn.get(f"task:{task_id}:result")
+    if result_json:
+        result = json.loads(result_json)
+        return JsonResponse({'status': 'success', **result})
+    return JsonResponse({'status': 'error', 'error': 'Result missing'}, status=500)

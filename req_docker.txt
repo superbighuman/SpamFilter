@@ -7,3 +7,4 @@ redis
 django-redis
 drf-yasg
 pyarrow
+confluent-kafka==2.3.0
