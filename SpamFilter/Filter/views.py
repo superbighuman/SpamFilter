@@ -1,114 +1,119 @@
-from django.shortcuts import render
-from django.http import HttpResponse, HttpRequest
-def menu(request:HttpRequest):
-    return render(request,"menu.html")
-from django.http import HttpResponse, HttpRequest, JsonResponse
+import json
+import hashlib
+import sys
+import os
+
+from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+
+from django_redis import get_redis_connection
+
 from pyspark.sql import SparkSession
 from pyspark.ml import PipelineModel
-import json
-from django_redis import get_redis_connection
-import time
-import hashlib
+
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.decorators import api_view
-from rest_framework.response import Response
-import sys
-import os
-#JAVA_HOME = r"C:\Program Files\Java\jdk-17"
-JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
-#JAVA_HOME = '/opt/homebrew/Cellar/openjdk@17/17.0.19'
-os.environ["JAVA_HOME"] = JAVA_HOME
-#os.environ["HADOOP_HOME"] = r"C:\hadoop"
-os.environ["PATH"] = JAVA_HOME + r"\bin;" + os.environ["PATH"]
+
 
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
 spark = SparkSession.builder \
-        .appName("SpamFilter") \
-        .config("spark.driver.memory", "2g") \
-        .config("spark.executor.memory", "2g") \
-        .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-        .config("spark.driver.extraJavaOptions", 
-                "--add-opens=java.base/java.lang=ALL-UNNAMED "
-                "--add-opens=java.base/java.nio=ALL-UNNAMED "
-                "--add-opens=java.base/java.util=ALL-UNNAMED "
-                "-XX:+IgnoreUnrecognizedVMOptions") \
-        .config("spark.executor.extraJavaOptions", 
-                "--add-opens=java.base/java.lang=ALL-UNNAMED "
-                "--add-opens=java.base/java.nio=ALL-UNNAMED "
-                "--add-opens=java.base/java.util=ALL-UNNAMED "
-                "-XX:+IgnoreUnrecognizedVMOptions") \
-        .getOrCreate()
-model = PipelineModel.load("models/spam_model_lr_ru") #SpamFilter/Filter/views.py
-def menu(request:HttpRequest):
-    return render(request,"menu.html")
+    .appName("SpamFilter") \
+    .config("spark.driver.memory", "2g") \
+    .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
+    .config("spark.ui.showConsoleProgress", "false") \
+    .getOrCreate()
+
+
+model = PipelineModel.load("models/spam_model_lr_ru")
+
+_ = spark.createDataFrame([("warmup",)], ["email"])
+_ = model.transform(_).collect()
+
+
+def menu(request: HttpRequest):
+    return render(request, "menu.html")
+
+
 @swagger_auto_schema(
     method='post',
-    operation_description="Определение спама на основе текста сообщения",
+    operation_description="Spam detection",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         required=['message'],
         properties={
-            'message': openapi.Schema(type=openapi.TYPE_STRING, description='Текст сообщения'),
+            'message': openapi.Schema(type=openapi.TYPE_STRING)
         },
     ),
-    responses={
-        200: openapi.Response(
-            description="Результат предсказания",
-            examples={
-                "application/json": {
-                    "status": "success",
-                    "result": "SPAM",
-                    "probability": 0.9432
-                }
-            }
-        ),
-        400: "Bad request"
-    }
+    responses={200: "OK"}
 )
 @csrf_exempt
 @api_view(['POST'])
 def predict(request):
-    if request.method == 'POST':
-        redis_conn = get_redis_connection("default")
+
+    try:
+        data = json.loads(request.body)
+        message = data.get("message", "").strip()
+
+        if not message:
+            return JsonResponse({
+                "status": "error",
+                "error": "Empty message"
+            })
+
+        key = "spam:" + hashlib.sha256(message.encode()).hexdigest()
+
+        redis_conn = None
+
+        # Попытка подключения к Redis
         try:
-            data = json.loads(request.body)
-            message = data.get('message', '').strip()
+            redis_conn = get_redis_connection("default")
 
-            if not message:
-                return JsonResponse({'status': 'error', 'error': 'Empty message'})
-
-            # Хешируем сообщение для использования как ключ Redis (безопаснее, короче)
-            key = f"spam_check:{hashlib.sha256(message.encode()).hexdigest()}"
-
-            # Попытка получить результат из Redis
             cached = redis_conn.get(key)
+
             if cached:
-                result_data = json.loads(cached)
-                return JsonResponse({'status': 'success', **result_data})
+                return JsonResponse(json.loads(cached))
 
-            # Если в Redis ничего не найдено — вызываем модель
-            df = spark.createDataFrame([(message,)], ["email"])
-            prediction = model.transform(df)
+        except Exception as redis_error:
+            print(f"Redis unavailable: {redis_error}")
 
-            result = prediction.select("prediction").collect()[0][0]
-            probability = prediction.select("probability").collect()[0][0][1]
+        # Обработка моделью
+        df = spark.createDataFrame([(message,)], ["email"])
 
-            result_data = {
-                'result': 'SPAM' if probability > 0.5 else 'NOT SPAM',
-                'probability': probability
-            }
+        result_df = model.transform(df)
 
-            # Сохраняем результат в Redis (например, на 1 день — 86400 секунд)
-            redis_conn.setex(key, 86400, json.dumps(result_data))
+        row = result_df.select(
+            "prediction",
+            "probability"
+        ).collect()[0]
 
-            return JsonResponse({'status': 'success', **result_data})
+        prediction = float(row["prediction"])
+        probability = float(row["probability"][1])
 
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'error': str(e)})
+        response = {
+            "status": "success",
+            "result": "SPAM" if probability > 0.5 else "NOT SPAM",
+            "probability": probability
+        }
 
-    return JsonResponse({'status': 'error', 'error': 'Invalid request method'})
 
+        if redis_conn:
+            try:
+                redis_conn.setex(
+                    key,
+                    86400,
+                    json.dumps(response)
+                )
+            except Exception as redis_error:
+                print(f"Redis save error: {redis_error}")
+
+        return JsonResponse(response)
+
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "error": str(e)
+        })

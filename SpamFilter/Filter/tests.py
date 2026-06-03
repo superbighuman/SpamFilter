@@ -41,6 +41,7 @@ class BaseSpamPredictTest(TestCase):
         return response.json()
 
     def _check_success_structure(self, data: dict):
+        print(data)
         self.assertEqual(data.get("status"), "success")
         self.assertIn("result", data)
         self.assertIn("probability", data)
